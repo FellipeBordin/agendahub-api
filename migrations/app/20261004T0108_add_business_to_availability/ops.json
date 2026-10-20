@@ -1,0 +1,125 @@
+[
+  {
+    "id": "column.public.Availability.businessId",
+    "label": "Add column \"businessId\" to \"Availability\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "businessId",
+        "table": "Availability"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"businessId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Availability",
+          "businessId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"businessId\"",
+        "sql": "ALTER TABLE \"public\".\"Availability\" ADD COLUMN \"businessId\" int4"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"businessId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Availability",
+          "businessId"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Availability.Availability_businessId_idx_ae0ed511",
+    "label": "Create index \"Availability_businessId_idx_ae0ed511\" on \"Availability\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Availability_businessId_idx_ae0ed511",
+        "table": "Availability"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Availability_businessId_idx_ae0ed511\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Availability_businessId_idx_ae0ed511\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Availability_businessId_idx_ae0ed511\"",
+        "sql": "CREATE INDEX \"Availability_businessId_idx_ae0ed511\" ON \"public\".\"Availability\" (\"businessId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Availability_businessId_idx_ae0ed511\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Availability_businessId_idx_ae0ed511\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Availability.Availability_businessId_fkey",
+    "label": "Add foreign key \"Availability_businessId_fkey\" on \"Availability\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Availability_businessId_fkey",
+        "table": "Availability"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Availability_businessId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Availability_businessId_fkey",
+          "public",
+          "\"public\".\"Availability\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Availability_businessId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Availability\"\nADD CONSTRAINT \"Availability_businessId_fkey\"\nFOREIGN KEY (\"businessId\")\nREFERENCES \"public\".\"Business\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Availability_businessId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Availability_businessId_fkey",
+          "public",
+          "\"public\".\"Availability\""
+        ]
+      }
+    ]
+  }
+]

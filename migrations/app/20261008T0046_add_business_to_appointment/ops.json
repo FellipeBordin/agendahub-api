@@ -1,0 +1,125 @@
+[
+  {
+    "id": "column.public.Appointment.businessId",
+    "label": "Add column \"businessId\" to \"Appointment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "businessId",
+        "table": "Appointment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"businessId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Appointment",
+          "businessId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"businessId\"",
+        "sql": "ALTER TABLE \"public\".\"Appointment\" ADD COLUMN \"businessId\" int4"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"businessId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Appointment",
+          "businessId"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Appointment.Appointment_businessId_idx_ae0ed511",
+    "label": "Create index \"Appointment_businessId_idx_ae0ed511\" on \"Appointment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Appointment_businessId_idx_ae0ed511",
+        "table": "Appointment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Appointment_businessId_idx_ae0ed511\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Appointment_businessId_idx_ae0ed511\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Appointment_businessId_idx_ae0ed511\"",
+        "sql": "CREATE INDEX \"Appointment_businessId_idx_ae0ed511\" ON \"public\".\"Appointment\" (\"businessId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Appointment_businessId_idx_ae0ed511\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Appointment_businessId_idx_ae0ed511\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Appointment.Appointment_businessId_fkey",
+    "label": "Add foreign key \"Appointment_businessId_fkey\" on \"Appointment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Appointment_businessId_fkey",
+        "table": "Appointment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Appointment_businessId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Appointment_businessId_fkey",
+          "public",
+          "\"public\".\"Appointment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Appointment_businessId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Appointment\"\nADD CONSTRAINT \"Appointment_businessId_fkey\"\nFOREIGN KEY (\"businessId\")\nREFERENCES \"public\".\"Business\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Appointment_businessId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Appointment_businessId_fkey",
+          "public",
+          "\"public\".\"Appointment\""
+        ]
+      }
+    ]
+  }
+]

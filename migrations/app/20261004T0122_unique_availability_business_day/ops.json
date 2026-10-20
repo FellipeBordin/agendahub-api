@@ -1,0 +1,86 @@
+[
+  {
+    "id": "dropConstraint.Availability.Availability_dayOfWeek_key",
+    "label": "Drop constraint \"Availability_dayOfWeek_key\" on \"Availability\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "Availability_dayOfWeek_key",
+        "table": "Availability"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Availability_dayOfWeek_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Availability_dayOfWeek_key",
+          "public",
+          "\"public\".\"Availability\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop constraint \"Availability_dayOfWeek_key\"",
+        "sql": "ALTER TABLE \"public\".\"Availability\" DROP CONSTRAINT \"Availability_dayOfWeek_key\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Availability_dayOfWeek_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Availability_dayOfWeek_key",
+          "public",
+          "\"public\".\"Availability\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.Availability.Availability_businessId_dayOfWeek_key",
+    "label": "Add unique constraint on \"Availability\" (businessId, dayOfWeek)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "Availability_businessId_dayOfWeek_key",
+        "table": "Availability"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Availability_businessId_dayOfWeek_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Availability_businessId_dayOfWeek_key",
+          "public",
+          "\"public\".\"Availability\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"Availability_businessId_dayOfWeek_key\"",
+        "sql": "ALTER TABLE \"public\".\"Availability\" ADD CONSTRAINT \"Availability_businessId_dayOfWeek_key\" UNIQUE (\"businessId\", \"dayOfWeek\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Availability_businessId_dayOfWeek_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Availability_businessId_dayOfWeek_key",
+          "public",
+          "\"public\".\"Availability\""
+        ]
+      }
+    ]
+  }
+]

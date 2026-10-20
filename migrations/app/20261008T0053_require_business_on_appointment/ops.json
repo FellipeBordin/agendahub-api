@@ -1,0 +1,50 @@
+[
+  {
+    "id": "alterNullability.setNotNull.Appointment.businessId",
+    "label": "Set NOT NULL on \"Appointment\".\"businessId\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "businessId",
+        "table": "Appointment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"businessId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Appointment",
+          "businessId"
+        ]
+      },
+      {
+        "description": "ensure no NULL values in \"businessId\"",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"public\".\"Appointment\" WHERE \"businessId\" IS NULL) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "set NOT NULL on \"businessId\"",
+        "sql": "ALTER TABLE \"public\".\"Appointment\" ALTER COLUMN \"businessId\" SET NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"businessId\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "Appointment",
+          "businessId",
+          "NO"
+        ]
+      }
+    ]
+  }
+]

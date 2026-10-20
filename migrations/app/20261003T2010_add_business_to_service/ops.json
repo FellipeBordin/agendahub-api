@@ -1,0 +1,125 @@
+[
+  {
+    "id": "column.public.Service.businessId",
+    "label": "Add column \"businessId\" to \"Service\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "businessId",
+        "table": "Service"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"businessId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Service",
+          "businessId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"businessId\"",
+        "sql": "ALTER TABLE \"public\".\"Service\" ADD COLUMN \"businessId\" int4"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"businessId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Service",
+          "businessId"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Service.Service_businessId_idx_ae0ed511",
+    "label": "Create index \"Service_businessId_idx_ae0ed511\" on \"Service\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Service_businessId_idx_ae0ed511",
+        "table": "Service"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Service_businessId_idx_ae0ed511\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Service_businessId_idx_ae0ed511\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Service_businessId_idx_ae0ed511\"",
+        "sql": "CREATE INDEX \"Service_businessId_idx_ae0ed511\" ON \"public\".\"Service\" (\"businessId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Service_businessId_idx_ae0ed511\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Service_businessId_idx_ae0ed511\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Service.Service_businessId_fkey",
+    "label": "Add foreign key \"Service_businessId_fkey\" on \"Service\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Service_businessId_fkey",
+        "table": "Service"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Service_businessId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Service_businessId_fkey",
+          "public",
+          "\"public\".\"Service\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Service_businessId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Service\"\nADD CONSTRAINT \"Service_businessId_fkey\"\nFOREIGN KEY (\"businessId\")\nREFERENCES \"public\".\"Business\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Service_businessId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Service_businessId_fkey",
+          "public",
+          "\"public\".\"Service\""
+        ]
+      }
+    ]
+  }
+]

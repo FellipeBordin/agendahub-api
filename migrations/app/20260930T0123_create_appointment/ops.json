@@ -1,0 +1,122 @@
+[
+  {
+    "id": "table.Appointment",
+    "label": "Create table \"Appointment\"",
+    "summary": "Creates table \"Appointment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Appointment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Appointment\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Appointment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Appointment\"",
+        "sql": "CREATE TABLE \"public\".\"Appointment\" (\n  \"clientName\" text NOT NULL,\n  \"clientPhone\" text NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"endAt\" timestamptz NOT NULL,\n  \"id\" SERIAL NOT NULL,\n  \"serviceId\" int4 NOT NULL,\n  \"startAt\" timestamptz NOT NULL,\n  \"status\" text DEFAULT 'SCHEDULED' NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"Appointment_status_check_78cb05f7\" CHECK (\"status\" IN ('SCHEDULED', 'COMPLETED', 'CANCELED'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Appointment\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Appointment\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Appointment.Appointment_serviceId_idx_b5d9acbf",
+    "label": "Create index \"Appointment_serviceId_idx_b5d9acbf\" on \"Appointment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Appointment_serviceId_idx_b5d9acbf",
+        "table": "Appointment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Appointment_serviceId_idx_b5d9acbf\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Appointment_serviceId_idx_b5d9acbf\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Appointment_serviceId_idx_b5d9acbf\"",
+        "sql": "CREATE INDEX \"Appointment_serviceId_idx_b5d9acbf\" ON \"public\".\"Appointment\" (\"serviceId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Appointment_serviceId_idx_b5d9acbf\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Appointment_serviceId_idx_b5d9acbf\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Appointment.Appointment_serviceId_fkey",
+    "label": "Add foreign key \"Appointment_serviceId_fkey\" on \"Appointment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Appointment_serviceId_fkey",
+        "table": "Appointment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Appointment_serviceId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Appointment_serviceId_fkey",
+          "public",
+          "\"public\".\"Appointment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Appointment_serviceId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Appointment\"\nADD CONSTRAINT \"Appointment_serviceId_fkey\"\nFOREIGN KEY (\"serviceId\")\nREFERENCES \"public\".\"Service\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Appointment_serviceId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Appointment_serviceId_fkey",
+          "public",
+          "\"public\".\"Appointment\""
+        ]
+      }
+    ]
+  }
+]

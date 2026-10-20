@@ -1,0 +1,125 @@
+[
+  {
+    "id": "column.public.BlockedPeriod.businessId",
+    "label": "Add column \"businessId\" to \"BlockedPeriod\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "businessId",
+        "table": "BlockedPeriod"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"businessId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "BlockedPeriod",
+          "businessId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"businessId\"",
+        "sql": "ALTER TABLE \"public\".\"BlockedPeriod\" ADD COLUMN \"businessId\" int4"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"businessId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "BlockedPeriod",
+          "businessId"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.BlockedPeriod.BlockedPeriod_businessId_idx_ae0ed511",
+    "label": "Create index \"BlockedPeriod_businessId_idx_ae0ed511\" on \"BlockedPeriod\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "BlockedPeriod_businessId_idx_ae0ed511",
+        "table": "BlockedPeriod"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"BlockedPeriod_businessId_idx_ae0ed511\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BlockedPeriod_businessId_idx_ae0ed511\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"BlockedPeriod_businessId_idx_ae0ed511\"",
+        "sql": "CREATE INDEX \"BlockedPeriod_businessId_idx_ae0ed511\" ON \"public\".\"BlockedPeriod\" (\"businessId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"BlockedPeriod_businessId_idx_ae0ed511\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BlockedPeriod_businessId_idx_ae0ed511\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.BlockedPeriod.BlockedPeriod_businessId_fkey",
+    "label": "Add foreign key \"BlockedPeriod_businessId_fkey\" on \"BlockedPeriod\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "BlockedPeriod_businessId_fkey",
+        "table": "BlockedPeriod"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"BlockedPeriod_businessId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "BlockedPeriod_businessId_fkey",
+          "public",
+          "\"public\".\"BlockedPeriod\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"BlockedPeriod_businessId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"BlockedPeriod\"\nADD CONSTRAINT \"BlockedPeriod_businessId_fkey\"\nFOREIGN KEY (\"businessId\")\nREFERENCES \"public\".\"Business\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"BlockedPeriod_businessId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "BlockedPeriod_businessId_fkey",
+          "public",
+          "\"public\".\"BlockedPeriod\""
+        ]
+      }
+    ]
+  }
+]

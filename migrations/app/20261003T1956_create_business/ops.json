@@ -1,0 +1,83 @@
+[
+  {
+    "id": "table.Business",
+    "label": "Create table \"Business\"",
+    "summary": "Creates table \"Business\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Business"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Business\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Business\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Business\"",
+        "sql": "CREATE TABLE \"public\".\"Business\" (\n  \"active\" bool DEFAULT true NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" SERIAL NOT NULL,\n  \"name\" text NOT NULL,\n  \"slug\" text NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Business\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Business\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.Business.Business_slug_key",
+    "label": "Add unique constraint on \"Business\" (slug)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "Business_slug_key",
+        "table": "Business"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Business_slug_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Business_slug_key",
+          "public",
+          "\"public\".\"Business\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"Business_slug_key\"",
+        "sql": "ALTER TABLE \"public\".\"Business\" ADD CONSTRAINT \"Business_slug_key\" UNIQUE (\"slug\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Business_slug_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Business_slug_key",
+          "public",
+          "\"public\".\"Business\""
+        ]
+      }
+    ]
+  }
+]
