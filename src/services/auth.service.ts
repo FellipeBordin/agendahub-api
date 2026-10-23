@@ -1,5 +1,5 @@
 import { db } from "../prisma/db.js";
-import { hashPassword } from "../utils/password.js";
+import { hashPassword, comparePassword } from "../utils/password.js";
 
 type RegisterBusinessInput = {
   businessName: string;
@@ -51,4 +51,54 @@ export async function registerBusiness(
       },
     };
   });
+}
+
+export async function authenticateUser(
+  email: string,
+  password: string,
+) {
+  const user = await getUserByEmail(email.trim().toLowerCase());
+
+  if (!user || !user.active) {
+    return {
+      error: "E-mail ou senha inválidos.",
+    };
+  }
+
+  const passwordMatches = await comparePassword(
+    password,
+    user.passwordHash,
+  );
+
+  if (!passwordMatches) {
+    return {
+      error: "E-mail ou senha inválidos.",
+    };
+  }
+
+  const business = await db.orm.public.Business
+    .where({ id: user.businessId })
+    .first();
+
+  if (!business || !business.active) {
+    return {
+      error: "O acesso a este negócio está indisponível.",
+    };
+  }
+
+  return {
+    data: {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        businessId: user.businessId,
+      },
+      business: {
+        id: business.id,
+        name: business.name,
+        slug: business.slug,
+      },
+    },
+  };
 }

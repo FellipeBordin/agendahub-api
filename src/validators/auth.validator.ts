@@ -9,6 +9,12 @@ type RegisterBusinessInput = {
   password: unknown;
 };
 
+type LoginInput = {
+  email: unknown;
+  password: unknown;
+};
+
+
 export function validateRegisterBusiness(
   data: RegisterBusinessInput,
 ) {
@@ -69,6 +75,42 @@ export function validateRegisterBusiness(
       userName: data.userName.trim(),
       email,
       password: data.password,
+    },
+  };
+}
+
+
+export function validateLogin(data: LoginInput) {
+  const { email, password } = data;
+
+  if (typeof email !== "string" || email.trim() === "") {
+    return {
+      error: "O e-mail é obrigatório.",
+    };
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (
+    normalizedEmail.length > 254 ||
+    !emailRegex.test(normalizedEmail)
+  ) {
+    return {
+      error: "Informe um e-mail válido.",
+    };
+  }
+
+  if (typeof password !== "string" || password.length === 0) {
+    return {
+      error: "A senha é obrigatória.",
+    };
+  }
+
+  return {
+    data: {
+      email: normalizedEmail,
+      password,
     },
   };
 }

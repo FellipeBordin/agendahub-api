@@ -5,10 +5,34 @@ import {
   getAppointmentByIdController,
   updateAppointmentStatusController,
 } from "../controllers/appointment.controller.js";
+import {
+  requireAuth,
+  requireBusinessAccess,
+} from "../middlewares/auth.middleware.js";
 
 export const appointmentRoutes = Router();
 
-appointmentRoutes.get("/:slug", listAppointmentsController);
+// O cliente pode solicitar um agendamento sem login.
 appointmentRoutes.post("/:slug", createAppointmentController);
-appointmentRoutes.get("/:slug/:id", getAppointmentByIdController);
-appointmentRoutes.patch("/:slug/:id/status", updateAppointmentStatusController);
+
+// Operações administrativas exigem acesso ao negócio.
+appointmentRoutes.get(
+  "/:slug",
+  requireAuth,
+  requireBusinessAccess,
+  listAppointmentsController,
+);
+
+appointmentRoutes.get(
+  "/:slug/:id",
+  requireAuth,
+  requireBusinessAccess,
+  getAppointmentByIdController,
+);
+
+appointmentRoutes.patch(
+  "/:slug/:id/status",
+  requireAuth,
+  requireBusinessAccess,
+  updateAppointmentStatusController,
+);
