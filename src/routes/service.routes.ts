@@ -6,14 +6,37 @@ import {
   updateServiceController,
   updateServiceStatusController,
 } from "../controllers/service.controller.js";
+import {
+  requireAuth,
+  requireBusinessAccess,
+} from "../middlewares/auth.middleware.js";
 
 const serviceRoutes = Router();
 
+// Consultas públicas para o cliente escolher o serviço.
 serviceRoutes.get("/:slug", listServices);
-serviceRoutes.post("/:slug", createServiceController);
-
 serviceRoutes.get("/:slug/:id", getServiceByIdController);
-serviceRoutes.put("/:slug/:id", updateServiceController);
-serviceRoutes.patch("/:slug/:id/status", updateServiceStatusController);
+
+// Operações administrativas.
+serviceRoutes.post(
+  "/:slug",
+  requireAuth,
+  requireBusinessAccess,
+  createServiceController,
+);
+
+serviceRoutes.put(
+  "/:slug/:id",
+  requireAuth,
+  requireBusinessAccess,
+  updateServiceController,
+);
+
+serviceRoutes.patch(
+  "/:slug/:id/status",
+  requireAuth,
+  requireBusinessAccess,
+  updateServiceStatusController,
+);
 
 export { serviceRoutes };

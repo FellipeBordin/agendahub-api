@@ -4,9 +4,27 @@ import {
   getAvailableSlotsController,
   updateAvailabilityController,
 } from "../controllers/availability.controller.js";
+import {
+  requireAuth,
+  requireBusinessAccess,
+} from "../middlewares/auth.middleware.js";
 
 export const availabilityRoutes = Router();
 
+// Consulta pública dos horários livres.
 availabilityRoutes.get("/:slug/slots", getAvailableSlotsController);
-availabilityRoutes.post("/:slug", createAvailabilityController);
-availabilityRoutes.patch("/:slug", updateAvailabilityController);
+
+// Configuração administrativa do funcionamento.
+availabilityRoutes.post(
+  "/:slug",
+  requireAuth,
+  requireBusinessAccess,
+  createAvailabilityController,
+);
+
+availabilityRoutes.patch(
+  "/:slug",
+  requireAuth,
+  requireBusinessAccess,
+  updateAvailabilityController,
+);

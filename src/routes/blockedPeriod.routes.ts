@@ -4,9 +4,30 @@ import {
   listBlockedPeriodsController,
   deleteBlockedPeriodController,
 } from "../controllers/blockedPeriod.controller.js";
+import {
+  requireAuth,
+  requireBusinessAccess,
+} from "../middlewares/auth.middleware.js";
 
 export const blockedPeriodRoutes = Router();
 
-blockedPeriodRoutes.post("/:slug", createBlockedPeriodController);
-blockedPeriodRoutes.get("/:slug", listBlockedPeriodsController);
-blockedPeriodRoutes.delete("/:slug/:id", deleteBlockedPeriodController);
+blockedPeriodRoutes.post(
+  "/:slug",
+  requireAuth,
+  requireBusinessAccess,
+  createBlockedPeriodController,
+);
+
+blockedPeriodRoutes.get(
+  "/:slug",
+  requireAuth,
+  requireBusinessAccess,
+  listBlockedPeriodsController,
+);
+
+blockedPeriodRoutes.delete(
+  "/:slug/:id",
+  requireAuth,
+  requireBusinessAccess,
+  deleteBlockedPeriodController,
+);
