@@ -1,5 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
-import { validateRegisterBusiness, validateLogin } from "../validators/auth.validator.js";
+import {
+  validateRegisterBusiness,
+  validateLogin,
+} from "../validators/auth.validator.js";
 import {
   getUserByEmail,
   registerBusiness,
@@ -7,6 +10,7 @@ import {
 } from "../services/auth.service.js";
 import { getBusinessBySlug } from "../services/business.service.js";
 import { generateAccessToken } from "../utils/token.js";
+import { isUniqueConstraintError } from "../utils/databaseErrors.js";
 
 export async function registerBusinessController(
   req: Request,
@@ -14,13 +18,7 @@ export async function registerBusinessController(
   next: NextFunction,
 ) {
   try {
-    const {
-      businessName,
-      slug,
-      userName,
-      email,
-      password,
-    } = req.body ?? {};
+    const { businessName, slug, userName, email, password } = req.body ?? {};
 
     const validation = validateRegisterBusiness({
       businessName,
@@ -36,9 +34,7 @@ export async function registerBusinessController(
       });
     }
 
-    const existingBusiness = await getBusinessBySlug(
-      validation.data.slug,
-    );
+    const existingBusiness = await getBusinessBySlug(validation.data.slug);
 
     if (existingBusiness) {
       return res.status(409).json({
@@ -46,9 +42,7 @@ export async function registerBusinessController(
       });
     }
 
-    const existingUser = await getUserByEmail(
-      validation.data.email,
-    );
+    const existingUser = await getUserByEmail(validation.data.email);
 
     if (existingUser) {
       return res.status(409).json({
@@ -60,7 +54,13 @@ export async function registerBusinessController(
 
     return res.status(201).json(result);
   } catch (error) {
-    next(error);
+    if (isUniqueConstraintError(error)) {
+      return res.status(409).json({
+        error: "Já existe um cadastro com este e-mail ou slug.",
+      });
+    }
+
+    return next(error);
   }
 }
 
