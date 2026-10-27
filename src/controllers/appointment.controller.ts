@@ -162,12 +162,23 @@ export async function updateAppointmentStatusController(
       error: "Agendamento não encontrado.",
     });
   }
-
-  const appointment = await updateAppointmentStatus(
+  const result = await updateAppointmentStatus(
     business.id,
     id,
     status as (typeof allowedStatuses)[number],
   );
 
-  return res.status(200).json(appointment);
+  if ("error" in result) {
+    if (result.error === "Agendamento não encontrado.") {
+      return res.status(404).json({
+        error: result.error,
+      });
+    }
+
+    return res.status(409).json({
+      error: result.error,
+    });
+  }
+
+  return res.status(200).json(result.data);
 }

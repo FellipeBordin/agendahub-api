@@ -1,8 +1,61 @@
 import { db } from "../prisma/db.js";
-import { getAvailabilityByDay } from "./availability.service.js";
-import { getBlockedPeriodsBetween } from "./blockedPeriod.service.js";
 
-export async function createAppointment(
+// O tipo acompanha automaticamente o cliente da versão instalada do Prisma.
+type AppointmentTransaction = Parameters<
+  Parameters<typeof db.transaction>[0]
+>[0];
+
+// Reserve este identificador para as operações da agenda.
+const SCHEDULE_LOCK_NAMESPACE = 74001;
+
+async function withScheduleLock<T>(
+  businessId: number,
+  action: (tx: AppointmentTransaction) => Promise<T>,
+): Promise<T> {
+  return db.transaction(async (tx) => {
+    // Cada consulta após a espera deve enxergar os commits anteriores.
+    await tx.execute(
+      db.raw.sql`SET TRANSACTION ISOLATION LEVEL READ COMMITTED`
+        .affectedCount()
+        .build(),
+    );
+
+    // A trava fica na conexão da transação e termina no commit ou rollback.
+    await tx.execute(
+      db.raw
+        .sql`SELECT pg_advisory_xact_lock(${SCHEDULE_LOCK_NAMESPACE}::integer, ${businessId}::integer)`
+        .affectedCount()
+        .build(),
+    );
+
+    return action(tx);
+  });
+}
+
+async function getAvailabilityInTransaction(
+  tx: AppointmentTransaction,
+  businessId: number,
+  dayOfWeek: number,
+) {
+  return tx.orm.public.Availability.where({ businessId })
+    .where({ dayOfWeek })
+    .first();
+}
+
+async function getBlockedPeriodsInTransaction(
+  tx: AppointmentTransaction,
+  businessId: number,
+  startAt: string,
+  endAt: string,
+) {
+  return tx.orm.public.BlockedPeriod.where({ businessId })
+    .where((period) => period.startAt.lt(endAt))
+    .where((period) => period.endAt.gt(startAt))
+    .all();
+}
+
+async function createAppointment(
+  tx: AppointmentTransaction,
   businessId: number,
   clientName: string,
   clientPhone: string,
@@ -10,7 +63,7 @@ export async function createAppointment(
   endAt: string,
   serviceId: number,
 ) {
-  const appointment = await db.orm.public.Appointment.create({
+  const appointment = await tx.orm.public.Appointment.create({
     businessId,
     clientName,
     clientPhone,
@@ -29,213 +82,55 @@ export async function scheduleAppointment(
   startAt: string,
   serviceId: number,
 ) {
-  const service = await db.orm.public.Service.where({ businessId })
-    .where({ id: serviceId })
-    .first();
+  return withScheduleLock(businessId, async (tx) => {
+    const service = await tx.orm.public.Service.where({ businessId })
+      .where({ id: serviceId })
+      .first();
 
-  if (!service) {
-    return {
-      error: "Serviço não encontrado.",
-    };
-  }
+    if (!service) {
+      return {
+        error: "Serviço não encontrado.",
+      };
+    }
 
-  if (!service.active) {
-    return {
-      error: "Este serviço está indisponível.",
-    };
-  }
+    if (!service.active) {
+      return {
+        error: "Este serviço está indisponível.",
+      };
+    }
 
-  // Exige data e hora com indicação explícita do fuso.
-  const normalizedStartAt = startAt.trim();
-  const dateTimeWithTimezone =
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+    // Exige data e hora com indicação explícita do fuso.
+    const normalizedStartAt = startAt.trim();
+    const dateTimeWithTimezone =
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
 
-  if (!dateTimeWithTimezone.test(normalizedStartAt)) {
-    return {
-      error:
-        "Informe a data com o fuso horário. Exemplo: 2026-10-21T20:00:00-03:00.",
-    };
-  }
+    if (!dateTimeWithTimezone.test(normalizedStartAt)) {
+      return {
+        error:
+          "Informe a data com o fuso horário. Exemplo: 2026-10-21T20:00:00-03:00.",
+      };
+    }
 
-  const startDate = new Date(normalizedStartAt);
+    const startDate = new Date(normalizedStartAt);
 
-  if (Number.isNaN(startDate.getTime())) {
-    return {
-      error: "O horário inicial é inválido.",
-    };
-  }
-
-  if (startDate.getTime() <= Date.now()) {
-    return {
-      error:
-        "Não é possível realizar um agendamento em um horário que já passou.",
-    };
-  }
-
-  const endDate = new Date(startDate.getTime() + service.duration * 60 * 1000);
-
-  // Interpreta início e término no fuso do negócio.
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Sao_Paulo",
-    weekday: "short",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  });
-
-  const startParts = formatter.formatToParts(startDate);
-  const endParts = formatter.formatToParts(endDate);
-
-  function getPart(
-    parts: Intl.DateTimeFormatPart[],
-    type: Intl.DateTimeFormatPartTypes,
-  ) {
-    return parts.find((part) => part.type === type)?.value ?? "";
-  }
-
-  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const dayOfWeek = weekdays.indexOf(getPart(startParts, "weekday"));
-
-  const availability = await getAvailabilityByDay(businessId, dayOfWeek);
-
-  if (!availability || !availability.active) {
-    return {
-      error: "Não há atendimento neste dia.",
-    };
-  }
-
-  const startHour = Number(getPart(startParts, "hour"));
-  const startMinute = Number(getPart(startParts, "minute"));
-  const startSecond = Number(getPart(startParts, "second"));
-
-  if (
-    (startMinute !== 0 && startMinute !== 30) ||
-    startSecond !== 0 ||
-    startDate.getUTCMilliseconds() !== 0
-  ) {
-    return {
-      error:
-        "O horário deve iniciar em intervalos de 30 minutos, sem segundos ou milissegundos.",
-    };
-  }
-
-  const sameDay = (["year", "month", "day"] as const).every(
-    (part) => getPart(startParts, part) === getPart(endParts, part),
-  );
-
-  const appointmentStartMinutes = startHour * 60 + startMinute;
-
-  const appointmentEndMinutes =
-    Number(getPart(endParts, "hour")) * 60 +
-    Number(getPart(endParts, "minute")) +
-    Number(getPart(endParts, "second")) / 60;
-
-  const [openHour, openMinute] = availability.startTime.split(":").map(Number);
-
-  const [closeHour, closeMinute] = availability.endTime.split(":").map(Number);
-
-  const openingMinutes = openHour * 60 + openMinute;
-  const closingMinutes = closeHour * 60 + closeMinute;
-
-  if (
-    !sameDay ||
-    appointmentStartMinutes < openingMinutes ||
-    appointmentEndMinutes > closingMinutes
-  ) {
-    return {
-      error: "O horário escolhido está fora do horário de atendimento.",
-    };
-  }
-
-  const startISO = startDate.toISOString();
-  const endISO = endDate.toISOString();
-
-  const blockedPeriods = await getBlockedPeriodsBetween(
-    businessId,
-    startISO,
-    endISO,
-  );
-
-  if (blockedPeriods.length > 0) {
-    return {
-      error: "Este horário está bloqueado para atendimento.",
-    };
-  }
-
-  const appointments = await db.orm.public.Appointment.where({ businessId })
-    .where((appointment) => appointment.startAt.lt(endISO))
-    .where((appointment) => appointment.endAt.gt(startISO))
-    .where({ status: "SCHEDULED" })
-    .all();
-
-  if (appointments.length > 0) {
-    return {
-      error: "Este horário não está disponível.",
-    };
-  }
-
-  const appointment = await createAppointment(
-    businessId,
-    clientName,
-    clientPhone,
-    startISO,
-    endISO,
-    serviceId,
-  );
-
-  return {
-    data: appointment,
-  };
-}
-
-export async function getAppointments(businessId: number) {
-  const appointments = await db.orm.public.Appointment.where({
-    businessId,
-  }).all();
-
-  return appointments;
-}
-
-export async function getAppointmentById(businessId: number, id: number) {
-  const appointment = await db.orm.public.Appointment.where({ businessId })
-    .where({ id })
-    .first();
-
-  return appointment;
-}
-
-export async function updateAppointmentStatus(
-  businessId: number,
-  id: number,
-  status: "SCHEDULED" | "COMPLETED" | "CANCELED",
-) {
-  const existingAppointment = await getAppointmentById(businessId, id);
-
-  if (!existingAppointment) {
-    return {
-      error: "Agendamento não encontrado.",
-    };
-  }
-
-  const isReactivating =
-    status === "SCHEDULED" && existingAppointment.status !== "SCHEDULED";
-
-  if (isReactivating) {
-    const startDate = new Date(existingAppointment.startAt);
-    const endDate = new Date(existingAppointment.endAt);
+    if (Number.isNaN(startDate.getTime())) {
+      return {
+        error: "O horário inicial é inválido.",
+      };
+    }
 
     if (startDate.getTime() <= Date.now()) {
       return {
         error:
-          "Não é possível reativar um agendamento em um horário que já passou.",
+          "Não é possível realizar um agendamento em um horário que já passou.",
       };
     }
 
-    // Converte o dia e o horário para o fuso do negócio.
+    const endDate = new Date(
+      startDate.getTime() + service.duration * 60 * 1000,
+    );
+
+    // Interpreta início e término no fuso do negócio.
     const formatter = new Intl.DateTimeFormat("en-US", {
       timeZone: "America/Sao_Paulo",
       weekday: "short",
@@ -259,15 +154,32 @@ export async function updateAppointmentStatus(
     }
 
     const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
     const dayOfWeek = weekdays.indexOf(getPart(startParts, "weekday"));
 
-    // Consulta o funcionamento atual desse dia.
-    const availability = await getAvailabilityByDay(businessId, dayOfWeek);
+    const availability = await getAvailabilityInTransaction(
+      tx,
+      businessId,
+      dayOfWeek,
+    );
 
     if (!availability || !availability.active) {
       return {
-        error: "Não é possível reativar: não há atendimento neste dia.",
+        error: "Não há atendimento neste dia.",
+      };
+    }
+
+    const startHour = Number(getPart(startParts, "hour"));
+    const startMinute = Number(getPart(startParts, "minute"));
+    const startSecond = Number(getPart(startParts, "second"));
+
+    if (
+      (startMinute !== 0 && startMinute !== 30) ||
+      startSecond !== 0 ||
+      startDate.getUTCMilliseconds() !== 0
+    ) {
+      return {
+        error:
+          "O horário deve iniciar em intervalos de 30 minutos, sem segundos ou milissegundos.",
       };
     }
 
@@ -275,12 +187,9 @@ export async function updateAppointmentStatus(
       (part) => getPart(startParts, part) === getPart(endParts, part),
     );
 
-    const startMinutes =
-      Number(getPart(startParts, "hour")) * 60 +
-      Number(getPart(startParts, "minute")) +
-      Number(getPart(startParts, "second")) / 60;
+    const appointmentStartMinutes = startHour * 60 + startMinute;
 
-    const endMinutes =
+    const appointmentEndMinutes =
       Number(getPart(endParts, "hour")) * 60 +
       Number(getPart(endParts, "minute")) +
       Number(getPart(endParts, "second")) / 60;
@@ -296,58 +205,251 @@ export async function updateAppointmentStatus(
     const openingMinutes = openHour * 60 + openMinute;
     const closingMinutes = closeHour * 60 + closeMinute;
 
-    // O atendimento inteiro precisa caber no funcionamento.
     if (
       !sameDay ||
-      startMinutes < openingMinutes ||
-      endMinutes > closingMinutes
+      appointmentStartMinutes < openingMinutes ||
+      appointmentEndMinutes > closingMinutes
     ) {
       return {
-        error:
-          "Não é possível reativar: o agendamento está fora do horário de atendimento.",
+        error: "O horário escolhido está fora do horário de atendimento.",
       };
     }
 
-    // Verifica os bloqueios manuais.
-    const blockedPeriods = await getBlockedPeriodsBetween(
+    const startISO = startDate.toISOString();
+    const endISO = endDate.toISOString();
+
+    const blockedPeriods = await getBlockedPeriodsInTransaction(
+      tx,
       businessId,
-      startDate.toISOString(),
-      endDate.toISOString(),
+      startISO,
+      endISO,
     );
 
     if (blockedPeriods.length > 0) {
       return {
-        error:
-          "Não é possível reativar: este horário está bloqueado para atendimento.",
+        error: "Este horário está bloqueado para atendimento.",
       };
     }
-  }
 
-  if (status === "SCHEDULED") {
-    const appointments = await db.orm.public.Appointment.where({ businessId })
-      .where((appointment) => appointment.startAt.lt(existingAppointment.endAt))
-      .where((appointment) => appointment.endAt.gt(existingAppointment.startAt))
+    const appointments = await tx.orm.public.Appointment.where({ businessId })
+      .where((appointment) => appointment.startAt.lt(endISO))
+      .where((appointment) => appointment.endAt.gt(startISO))
       .where({ status: "SCHEDULED" })
       .all();
 
-    const hasConflict = appointments.some(
-      (appointment) => appointment.id !== id,
-    );
-
-    if (hasConflict) {
+    if (appointments.length > 0) {
       return {
-        error: "Não é possível reativar: este horário já está ocupado.",
+        error: "Este horário não está disponível.",
       };
     }
-  }
 
+    const appointment = await createAppointment(
+      tx,
+      businessId,
+      clientName,
+      clientPhone,
+      startISO,
+      endISO,
+      serviceId,
+    );
+
+    return {
+      data: appointment,
+    };
+  });
+}
+
+export async function getAppointments(businessId: number) {
+  const appointments = await db.orm.public.Appointment.where({
+    businessId,
+  }).all();
+
+  return appointments;
+}
+
+export async function getAppointmentById(businessId: number, id: number) {
   const appointment = await db.orm.public.Appointment.where({ businessId })
     .where({ id })
-    .update({ status });
+    .first();
 
-  return {
-    data: appointment,
-  };
+  return appointment;
+}
+
+export async function updateAppointmentStatus(
+  businessId: number,
+  id: number,
+  status: "SCHEDULED" | "COMPLETED" | "CANCELED",
+) {
+  return withScheduleLock(businessId, async (tx) => {
+    const existingAppointment = await tx.orm.public.Appointment.where({
+      businessId,
+    })
+      .where({ id })
+      .first();
+
+    if (!existingAppointment) {
+      return {
+        error: "Agendamento não encontrado.",
+      };
+    }
+    // Impede alterações em agendamentos concluídos.
+    if (existingAppointment.status === "COMPLETED" && status !== "COMPLETED") {
+      return {
+        error: "Não é possível alterar um agendamento concluído.",
+      };
+    }
+
+    // Impede concluir um agendamento cancelado.
+    if (existingAppointment.status === "CANCELED" && status === "COMPLETED") {
+      return {
+        error: "Não é possível concluir um agendamento cancelado.",
+      };
+    }
+
+    // Se o status já é o solicitado, não precisa atualizar.
+    if (existingAppointment.status === status) {
+      return {
+        data: existingAppointment,
+      };
+    }
+
+    const isReactivating =
+      status === "SCHEDULED" && existingAppointment.status !== "SCHEDULED";
+
+    if (isReactivating) {
+      const startDate = new Date(existingAppointment.startAt);
+      const endDate = new Date(existingAppointment.endAt);
+
+      if (startDate.getTime() <= Date.now()) {
+        return {
+          error:
+            "Não é possível reativar um agendamento em um horário que já passou.",
+        };
+      }
+
+      // Converte o dia e o horário para o fuso do negócio.
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Sao_Paulo",
+        weekday: "short",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23",
+      });
+
+      const startParts = formatter.formatToParts(startDate);
+      const endParts = formatter.formatToParts(endDate);
+
+      function getPart(
+        parts: Intl.DateTimeFormatPart[],
+        type: Intl.DateTimeFormatPartTypes,
+      ) {
+        return parts.find((part) => part.type === type)?.value ?? "";
+      }
+
+      const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+      const dayOfWeek = weekdays.indexOf(getPart(startParts, "weekday"));
+
+      // Consulta o funcionamento atual desse dia.
+      const availability = await getAvailabilityInTransaction(
+        tx,
+        businessId,
+        dayOfWeek,
+      );
+
+      if (!availability || !availability.active) {
+        return {
+          error: "Não é possível reativar: não há atendimento neste dia.",
+        };
+      }
+
+      const sameDay = (["year", "month", "day"] as const).every(
+        (part) => getPart(startParts, part) === getPart(endParts, part),
+      );
+
+      const startMinutes =
+        Number(getPart(startParts, "hour")) * 60 +
+        Number(getPart(startParts, "minute")) +
+        Number(getPart(startParts, "second")) / 60;
+
+      const endMinutes =
+        Number(getPart(endParts, "hour")) * 60 +
+        Number(getPart(endParts, "minute")) +
+        Number(getPart(endParts, "second")) / 60;
+
+      const [openHour, openMinute] = availability.startTime
+        .split(":")
+        .map(Number);
+
+      const [closeHour, closeMinute] = availability.endTime
+        .split(":")
+        .map(Number);
+
+      const openingMinutes = openHour * 60 + openMinute;
+      const closingMinutes = closeHour * 60 + closeMinute;
+
+      // O atendimento inteiro precisa caber no funcionamento.
+      if (
+        !sameDay ||
+        startMinutes < openingMinutes ||
+        endMinutes > closingMinutes
+      ) {
+        return {
+          error:
+            "Não é possível reativar: o agendamento está fora do horário de atendimento.",
+        };
+      }
+
+      // Verifica os bloqueios manuais.
+      const blockedPeriods = await getBlockedPeriodsInTransaction(
+        tx,
+        businessId,
+        startDate.toISOString(),
+        endDate.toISOString(),
+      );
+
+      if (blockedPeriods.length > 0) {
+        return {
+          error:
+            "Não é possível reativar: este horário está bloqueado para atendimento.",
+        };
+      }
+    }
+
+    if (status === "SCHEDULED") {
+      const appointments = await tx.orm.public.Appointment.where({ businessId })
+        .where((appointment) =>
+          appointment.startAt.lt(existingAppointment.endAt),
+        )
+        .where((appointment) =>
+          appointment.endAt.gt(existingAppointment.startAt),
+        )
+        .where({ status: "SCHEDULED" })
+        .all();
+
+      const hasConflict = appointments.some(
+        (appointment) => appointment.id !== id,
+      );
+
+      if (hasConflict) {
+        return {
+          error: "Não é possível reativar: este horário já está ocupado.",
+        };
+      }
+    }
+
+    const appointment = await tx.orm.public.Appointment.where({ businessId })
+      .where({ id })
+      .update({ status });
+
+    return {
+      data: appointment,
+    };
+  });
 }
 
 export async function getAppointmentsBetween(
