@@ -1,36 +1,10 @@
 import { db } from "../prisma/db.js";
+import {
+  withScheduleLock,
+  type AppointmentTransaction,
+} from "../utils/scheduleLock.js";
 
-// O tipo acompanha automaticamente o cliente da versão instalada do Prisma.
-type AppointmentTransaction = Parameters<
-  Parameters<typeof db.transaction>[0]
->[0];
 
-// Reserve este identificador para as operações da agenda.
-const SCHEDULE_LOCK_NAMESPACE = 74001;
-
-async function withScheduleLock<T>(
-  businessId: number,
-  action: (tx: AppointmentTransaction) => Promise<T>,
-): Promise<T> {
-  return db.transaction(async (tx) => {
-    // Cada consulta após a espera deve enxergar os commits anteriores.
-    await tx.execute(
-      db.raw.sql`SET TRANSACTION ISOLATION LEVEL READ COMMITTED`
-        .affectedCount()
-        .build(),
-    );
-
-    // A trava fica na conexão da transação e termina no commit ou rollback.
-    await tx.execute(
-      db.raw
-        .sql`SELECT pg_advisory_xact_lock(${SCHEDULE_LOCK_NAMESPACE}::integer, ${businessId}::integer)`
-        .affectedCount()
-        .build(),
-    );
-
-    return action(tx);
-  });
-}
 
 async function getAvailabilityInTransaction(
   tx: AppointmentTransaction,

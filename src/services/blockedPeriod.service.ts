@@ -1,35 +1,38 @@
 import { db } from "../prisma/db.js";
+import {
+  withScheduleLock,
+  type AppointmentTransaction,
+} from "../utils/scheduleLock.js";
 
-export async function createBlockedPeriod(
+// Função interna: a gravação exige uma transação já protegida.
+async function createBlockedPeriod(
+  tx: AppointmentTransaction,
   businessId: number,
   startAt: string,
   endAt: string,
   allDay: boolean,
   reason?: string,
 ) {
-  const blockedPeriod = await db.orm.public.BlockedPeriod.create({
+  return tx.orm.public.BlockedPeriod.create({
     businessId,
     startAt,
     endAt,
     allDay,
     reason,
   });
-
-  return blockedPeriod;
 }
 
+// Consulta pública, sem alteração de dados.
 export async function getAppointmentsConflictingWithBlock(
   businessId: number,
   startAt: string,
   endAt: string,
 ) {
-  const appointments = await db.orm.public.Appointment.where({ businessId })
+  return db.orm.public.Appointment.where({ businessId })
     .where((appointment) => appointment.startAt.lt(endAt))
     .where((appointment) => appointment.endAt.gt(startAt))
     .where({ status: "SCHEDULED" })
     .all();
-
-  return appointments;
 }
 
 export async function scheduleBlockedPeriod(
@@ -39,30 +42,35 @@ export async function scheduleBlockedPeriod(
   allDay: boolean,
   reason?: string,
 ) {
-  const appointments = await getAppointmentsConflictingWithBlock(
-    businessId,
-    startAt,
-    endAt,
-  );
+  return withScheduleLock(businessId, async (tx) => {
+    // A consulta precisa usar a mesma transação da gravação.
+    const appointments = await tx.orm.public.Appointment
+      .where({ businessId })
+      .where((appointment) => appointment.startAt.lt(endAt))
+      .where((appointment) => appointment.endAt.gt(startAt))
+      .where({ status: "SCHEDULED" })
+      .all();
 
-  if (appointments.length > 0) {
+    if (appointments.length > 0) {
+      return {
+        error: "Existem agendamentos confirmados dentro deste período.",
+        appointments,
+      };
+    }
+
+    const blockedPeriod = await createBlockedPeriod(
+      tx,
+      businessId,
+      startAt,
+      endAt,
+      allDay,
+      reason,
+    );
+
     return {
-      error: "Existem agendamentos confirmados dentro deste período.",
-      appointments,
+      data: blockedPeriod,
     };
-  }
-
-  const blockedPeriod = await createBlockedPeriod(
-    businessId,
-    startAt,
-    endAt,
-    allDay,
-    reason,
-  );
-
-  return {
-    data: blockedPeriod,
-  };
+  });
 }
 
 export async function getBlockedPeriodsBetween(
@@ -70,33 +78,35 @@ export async function getBlockedPeriodsBetween(
   startAt: string,
   endAt: string,
 ) {
-  const blockedPeriods = await db.orm.public.BlockedPeriod.where({ businessId })
+  return db.orm.public.BlockedPeriod.where({ businessId })
     .where((blockedPeriod) => blockedPeriod.startAt.lt(endAt))
     .where((blockedPeriod) => blockedPeriod.endAt.gt(startAt))
     .all();
-
-  return blockedPeriods;
 }
 
 export async function getBlockedPeriods(businessId: number) {
-  const blockedPeriods = await db.orm.public.BlockedPeriod.where({
-    businessId,
-  }).all();
-
-  return blockedPeriods;
+  return db.orm.public.BlockedPeriod.where({ businessId }).all();
 }
-export async function deleteBlockedPeriod(businessId: number, id: number) {
-  const blockedPeriod = await db.orm.public.BlockedPeriod.where({ businessId })
-    .where({ id })
-    .first();
 
-  if (!blockedPeriod) {
-    return null;
-  }
+export async function deleteBlockedPeriod(
+  businessId: number,
+  id: number,
+) {
+  return withScheduleLock(businessId, async (tx) => {
+    const blockedPeriod = await tx.orm.public.BlockedPeriod
+      .where({ businessId })
+      .where({ id })
+      .first();
 
-  await db.orm.public.BlockedPeriod.where({ businessId })
-    .where({ id })
-    .delete();
+    if (!blockedPeriod) {
+      return null;
+    }
 
-  return blockedPeriod;
+    await tx.orm.public.BlockedPeriod
+      .where({ businessId })
+      .where({ id })
+      .delete();
+
+    return blockedPeriod;
+  });
 }
