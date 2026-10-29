@@ -4,8 +4,6 @@ import {
   type AppointmentTransaction,
 } from "../utils/scheduleLock.js";
 
-
-
 async function getAvailabilityInTransaction(
   tx: AppointmentTransaction,
   businessId: number,
@@ -291,6 +289,22 @@ export async function updateAppointmentStatus(
       status === "SCHEDULED" && existingAppointment.status !== "SCHEDULED";
 
     if (isReactivating) {
+      const service = await tx.orm.public.Service.where({ businessId })
+        .where({ id: existingAppointment.serviceId })
+        .first();
+
+      if (!service) {
+        return {
+          error: "Não é possível reativar: serviço não encontrado.",
+        };
+      }
+
+      if (!service.active) {
+        return {
+          error: "Não é possível reativar: este serviço está indisponível.",
+        };
+      }
+
       const startDate = new Date(existingAppointment.startAt);
       const endDate = new Date(existingAppointment.endAt);
 

@@ -1,4 +1,5 @@
 import { db } from "../prisma/db.js";
+import { withScheduleLock } from "../utils/scheduleLock.js";
 
 export async function getServices(businessId: number) {
   const services = await db.orm.public.Service.where({ businessId })
@@ -45,15 +46,17 @@ export async function updateService(
   price: string,
   duration: number,
 ) {
-  const service = await db.orm.public.Service.where({ businessId })
-    .where({ id })
-    .update({
-      name,
-      price,
-      duration,
-    });
+  return withScheduleLock(businessId, async (tx) => {
+    const service = await tx.orm.public.Service.where({ businessId })
+      .where({ id })
+      .update({
+        name,
+        price,
+        duration,
+      });
 
-  return service;
+    return service;
+  });
 }
 
 export async function updateServiceStatus(
@@ -61,11 +64,11 @@ export async function updateServiceStatus(
   id: number,
   active: boolean,
 ) {
-  const service = await db.orm.public.Service.where({ businessId })
-    .where({ id })
-    .update({
-      active,
-    });
+  return withScheduleLock(businessId, async (tx) => {
+    const service = await tx.orm.public.Service.where({ businessId })
+      .where({ id })
+      .update({ active });
 
-  return service;
+    return service;
+  });
 }

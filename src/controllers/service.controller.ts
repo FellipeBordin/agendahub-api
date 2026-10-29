@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import {
   getServices,
   createService,
@@ -48,7 +48,7 @@ export async function createServiceController(req: Request, res: Response) {
     });
   }
 
-  const { name, price, duration } = req.body;
+  const { name, price, duration } = req.body ?? {};
 
   const validation = validateService({
     name,
@@ -192,7 +192,7 @@ export async function updateServiceStatusController(
     });
   }
 
-  const { active } = req.body;
+  const { active } = req.body ?? {};
 
   if (typeof active !== "boolean") {
     return res.status(400).json({
