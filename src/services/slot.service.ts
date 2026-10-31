@@ -16,9 +16,10 @@ export function generateTimeSlots(
   const closingMinutes = endHour * 60 + endMinute;
 
   const slots: string[] = [];
+  const firstSlotMinutes = Math.ceil(openingMinutes / 30) * 30;
 
   for (
-    let currentMinutes = openingMinutes;
+    let currentMinutes = firstSlotMinutes;
     currentMinutes + duration <= closingMinutes;
     currentMinutes += 30
   ) {

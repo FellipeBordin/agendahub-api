@@ -3,6 +3,7 @@ import {
   withScheduleLock,
   type AppointmentTransaction,
 } from "../utils/scheduleLock.js";
+import { parseDateTime } from "../utils/parseDateTime.js";
 
 async function getAvailabilityInTransaction(
   tx: AppointmentTransaction,
@@ -72,22 +73,12 @@ export async function scheduleAppointment(
     }
 
     // Exige data e hora com indicação explícita do fuso.
-    const normalizedStartAt = startAt.trim();
-    const dateTimeWithTimezone =
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+    const startDate = parseDateTime(startAt);
 
-    if (!dateTimeWithTimezone.test(normalizedStartAt)) {
+    if (!startDate) {
       return {
         error:
-          "Informe a data com o fuso horário. Exemplo: 2026-10-21T20:00:00-03:00.",
-      };
-    }
-
-    const startDate = new Date(normalizedStartAt);
-
-    if (Number.isNaN(startDate.getTime())) {
-      return {
-        error: "O horário inicial é inválido.",
+          "Informe uma data válida com horário e fuso, por exemplo: 2026-11-04T10:00:00-03:00.",
       };
     }
 
