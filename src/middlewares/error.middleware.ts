@@ -10,7 +10,16 @@ export function errorHandler(
     return next(error);
   }
 
-  // Erro gerado pelo express.json() ao receber JSON malformado.
+  if (
+    error instanceof Error &&
+    "type" in error &&
+    error.type === "entity.too.large"
+  ) {
+    return res.status(413).json({
+      error: "O corpo da requisição excede o limite permitido de 100 KB.",
+    });
+  }
+
   if (
     error instanceof SyntaxError &&
     "type" in error &&
@@ -21,7 +30,7 @@ export function errorHandler(
     });
   }
 
-  // Registra apenas a categoria, sem body, token ou credenciais.
+  // Não registra corpo, token ou credenciais.
   console.error("Erro não tratado na API:", {
     name: error instanceof Error ? error.name : "UnknownError",
   });
