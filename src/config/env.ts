@@ -60,4 +60,44 @@ export function validateEnvironment(): void {
   getDatabaseUrl();
   getJwtSecret();
   getPort();
+  getCorsOrigins();
+}
+
+export function getCorsOrigins(): string[] {
+  const value = process.env["CORS_ORIGINS"];
+
+  if (!value || value.trim() === "") {
+    throw new Error("Configure CORS_ORIGINS com o endereço do frontend.");
+  }
+
+  const origins = value.split(",").map((item) => item.trim());
+
+  const normalizedOrigins = origins.map((origin) => {
+    let url: URL;
+
+    try {
+      url = new URL(origin);
+    } catch {
+      throw new Error(
+        "CORS_ORIGINS deve conter endereços HTTP ou HTTPS separados por vírgula.",
+      );
+    }
+
+    if (
+      !["http:", "https:"].includes(url.protocol) ||
+      url.username ||
+      url.password ||
+      url.pathname !== "/" ||
+      url.search ||
+      url.hash
+    ) {
+      throw new Error(
+        "CORS_ORIGINS deve conter apenas origens, sem credenciais, caminhos ou parâmetros.",
+      );
+    }
+
+    return url.origin;
+  });
+
+  return [...new Set(normalizedOrigins)];
 }
