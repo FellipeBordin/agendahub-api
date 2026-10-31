@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   listServices,
+  listAllServicesController,
   createServiceController,
   getServiceByIdController,
   updateServiceController,
@@ -13,11 +14,19 @@ import {
 
 const serviceRoutes = Router();
 
-// Consultas públicas para o cliente escolher o serviço.
+// Lista pública: somente serviços ativos.
 serviceRoutes.get("/:slug", listServices);
+
+// Deve vir antes de "/:slug/:id".
+serviceRoutes.get(
+  "/:slug/admin",
+  requireAuth,
+  requireBusinessAccess,
+  listAllServicesController,
+);
+
 serviceRoutes.get("/:slug/:id", getServiceByIdController);
 
-// Operações administrativas.
 serviceRoutes.post(
   "/:slug",
   requireAuth,

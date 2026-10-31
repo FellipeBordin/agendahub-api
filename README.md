@@ -202,6 +202,7 @@ Todos os caminhos abaixo começam com `/api`.
 | POST   | /blocked-periods/:slug                                 | Administrador do negócio |
 | GET    | /blocked-periods/:slug                                 | Administrador do negócio |
 | DELETE | /blocked-periods/:slug/:id                             | Administrador do negócio |
+| GET    | /services/:slug/admin                                  | Administrador do negócio |
 
 Substitua `:slug` pelo identificador do negócio e `:id` pelo ID do registro.
 

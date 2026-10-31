@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import {
   getServices,
+  getAllServices,
   createService,
   getServiceById,
   updateService,
@@ -91,7 +92,7 @@ export async function getServiceByIdController(req: Request, res: Response) {
 
   const id = Number(req.params.id);
 
-  if (!Number.isInteger(id) || id <= 0) {
+  if (!Number.isSafeInteger(id) || id <= 0) {
     return res.status(400).json({
       error: "ID do serviço inválido.",
     });
@@ -127,13 +128,13 @@ export async function updateServiceController(req: Request, res: Response) {
 
   const id = Number(req.params.id);
 
-  if (!Number.isInteger(id) || id <= 0) {
+  if (!Number.isSafeInteger(id) || id <= 0) {
     return res.status(400).json({
       error: "ID do serviço inválido.",
     });
   }
 
-  const { name, price, duration } = req.body;
+  const { name, price, duration } = req.body ?? {};
 
   const validation = validateService({
     name,
@@ -186,7 +187,7 @@ export async function updateServiceStatusController(
 
   const id = Number(req.params.id);
 
-  if (!Number.isInteger(id) || id <= 0) {
+  if (!Number.isSafeInteger(id) || id <= 0) {
     return res.status(400).json({
       error: "ID do serviço inválido.",
     });
@@ -209,4 +210,26 @@ export async function updateServiceStatusController(
   }
 
   return res.json(service);
+}
+
+export async function listAllServicesController(req: Request, res: Response) {
+  const slug = req.params.slug;
+
+  if (typeof slug !== "string" || slug.trim() === "") {
+    return res.status(400).json({
+      error: "O negócio não foi informado.",
+    });
+  }
+
+  const business = await getBusinessBySlug(slug);
+
+  if (!business || !business.active) {
+    return res.status(404).json({
+      error: "Negócio não encontrado.",
+    });
+  }
+
+  const services = await getAllServices(business.id);
+
+  return res.status(200).json(services);
 }
