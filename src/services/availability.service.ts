@@ -155,3 +155,11 @@ export async function updateAvailability(
     return { data: availability, previous };
   });
 }
+
+export async function getAvailabilities(businessId: number) {
+  const availabilities = await db.orm.public.Availability.where({
+    businessId,
+  }).all();
+
+  return availabilities.sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+}

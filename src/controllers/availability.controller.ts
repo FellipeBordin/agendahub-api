@@ -3,6 +3,7 @@ import { validateAvailability } from "../validators/availability.validator.js";
 import {
   createAvailability,
   updateAvailability,
+  getAvailabilities,
 } from "../services/availability.service.js";
 import { getAvailableSlots } from "../services/slot.service.js";
 import { getBusinessBySlug } from "../services/business.service.js";
@@ -156,4 +157,29 @@ export async function updateAvailabilityController(
     data: result.data,
     previous: result.previous,
   });
+}
+
+export async function listAvailabilitiesController(
+  req: Request,
+  res: Response,
+) {
+  const slug = req.params.slug;
+
+  if (typeof slug !== "string" || slug.trim() === "") {
+    return res.status(400).json({
+      error: "O negócio não foi informado.",
+    });
+  }
+
+  const business = await getBusinessBySlug(slug);
+
+  if (!business || !business.active) {
+    return res.status(404).json({
+      error: "Negócio não encontrado.",
+    });
+  }
+
+  const availabilities = await getAvailabilities(business.id);
+
+  return res.status(200).json(availabilities);
 }

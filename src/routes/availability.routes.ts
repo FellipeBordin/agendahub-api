@@ -3,6 +3,7 @@ import {
   createAvailabilityController,
   getAvailableSlotsController,
   updateAvailabilityController,
+  listAvailabilitiesController,
 } from "../controllers/availability.controller.js";
 import {
   requireAuth,
@@ -13,6 +14,14 @@ export const availabilityRoutes = Router();
 
 // Consulta pública dos horários livres.
 availabilityRoutes.get("/:slug/slots", getAvailableSlotsController);
+
+// Consulta administrativa do funcionamento semanal.
+availabilityRoutes.get(
+  "/:slug",
+  requireAuth,
+  requireBusinessAccess,
+  listAvailabilitiesController,
+);
 
 // Configuração administrativa do funcionamento.
 availabilityRoutes.post(
