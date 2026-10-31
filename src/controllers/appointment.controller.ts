@@ -24,7 +24,7 @@ export async function createAppointmentController(req: Request, res: Response) {
     });
   }
 
-  const { clientName, clientPhone, startAt, serviceId } = req.body;
+  const { clientName, clientPhone, startAt, serviceId } = req.body ?? {};
 
   const validation = validateAppointment({
     clientName,
@@ -136,9 +136,9 @@ export async function updateAppointmentStatusController(
   }
 
   const id = Number(req.params.id);
-  const { status } = req.body;
+  const { status } = req.body ?? {};
 
-  if (!Number.isInteger(id) || id <= 0) {
+  if (!Number.isSafeInteger(id) || id <= 0) {
     return res.status(400).json({
       error: "ID do agendamento inválido.",
     });

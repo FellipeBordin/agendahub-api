@@ -1,3 +1,4 @@
+import { parseDateTime } from "../utils/parseDateTime.js";
 export type AppointmentInput = {
   clientName: unknown;
   clientPhone: unknown;
@@ -26,17 +27,18 @@ export function validateAppointment(data: AppointmentInput) {
     };
   }
 
-  const startDate = new Date(startAt);
+  const startDate = parseDateTime(startAt);
 
-  if (Number.isNaN(startDate.getTime())) {
+  if (!startDate) {
     return {
-      error: "O horário inicial é inválido.",
+      error:
+        "Informe uma data válida com horário e fuso, por exemplo: 2026-11-04T10:00:00-03:00.",
     };
   }
 
   if (
     typeof serviceId !== "number" ||
-    !Number.isInteger(serviceId) ||
+    !Number.isSafeInteger(serviceId) ||
     serviceId <= 0
   ) {
     return {

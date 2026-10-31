@@ -14,10 +14,7 @@ type LoginInput = {
   password: unknown;
 };
 
-
-export function validateRegisterBusiness(
-  data: RegisterBusinessInput,
-) {
+export function validateRegisterBusiness(data: RegisterBusinessInput) {
   const businessValidation = validateBusiness({
     name: data.businessName,
     slug: data.slug,
@@ -29,10 +26,7 @@ export function validateRegisterBusiness(
     };
   }
 
-  if (
-    typeof data.userName !== "string" ||
-    data.userName.trim().length < 2
-  ) {
+  if (typeof data.userName !== "string" || data.userName.trim().length < 2) {
     return {
       error: "O nome do responsável deve ter pelo menos 2 caracteres.",
     };
@@ -53,10 +47,7 @@ export function validateRegisterBusiness(
     };
   }
 
-  if (
-    typeof data.password !== "string" ||
-    data.password.length < 8
-  ) {
+  if (typeof data.password !== "string" || data.password.length < 8) {
     return {
       error: "A senha deve ter pelo menos 8 caracteres.",
     };
@@ -79,7 +70,6 @@ export function validateRegisterBusiness(
   };
 }
 
-
 export function validateLogin(data: LoginInput) {
   const { email, password } = data;
 
@@ -92,10 +82,7 @@ export function validateLogin(data: LoginInput) {
   const normalizedEmail = email.trim().toLowerCase();
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  if (
-    normalizedEmail.length > 254 ||
-    !emailRegex.test(normalizedEmail)
-  ) {
+  if (normalizedEmail.length > 254 || !emailRegex.test(normalizedEmail)) {
     return {
       error: "Informe um e-mail válido.",
     };
@@ -104,6 +91,12 @@ export function validateLogin(data: LoginInput) {
   if (typeof password !== "string" || password.length === 0) {
     return {
       error: "A senha é obrigatória.",
+    };
+  }
+
+  if (Buffer.byteLength(password, "utf8") > 72) {
+    return {
+      error: "A senha deve ter no máximo 72 bytes.",
     };
   }
 

@@ -27,7 +27,7 @@ export async function createBlockedPeriodController(
     });
   }
 
-  const { startAt, endAt, allDay, reason } = req.body;
+  const { startAt, endAt, allDay, reason } = req.body ?? {};
 
   const validation = validateBlockedPeriod({
     startAt,
@@ -106,7 +106,7 @@ export async function deleteBlockedPeriodController(
 
   const id = Number(req.params.id);
 
-  if (!Number.isInteger(id) || id <= 0) {
+  if (!Number.isSafeInteger(id) || id <= 0) {
     return res.status(400).json({
       error: "ID do bloqueio inválido.",
     });

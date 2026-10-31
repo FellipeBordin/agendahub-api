@@ -102,8 +102,10 @@ export async function getAvailableSlotsController(req: Request, res: Response) {
   }
 
   const numericServiceId = Number(serviceId);
-  if (!Number.isInteger(numericServiceId) || numericServiceId <= 0) {
-    return res.status(400).json({ error: "O serviço informado é inválido." });
+  if (!Number.isSafeInteger(numericServiceId) || numericServiceId <= 0) {
+    return res.status(400).json({
+      error: "O serviço informado é inválido.",
+    });
   }
 
   const result = await getAvailableSlots(business.id, date, numericServiceId);
