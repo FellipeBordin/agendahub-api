@@ -1,4 +1,4 @@
-import "dotenv/config";
+import { getJwtSecret } from "../config/env.js";
 import jwt from "jsonwebtoken";
 
 export type AuthTokenPayload = {
@@ -6,21 +6,7 @@ export type AuthTokenPayload = {
   businessId: number;
 };
 
-function getJwtSecret(): string {
-  const secret = process.env["JWT_SECRET"];
-
-  if (!secret || secret.length < 64) {
-    throw new Error(
-      "Configure JWT_SECRET no .env com a chave gerada.",
-    );
-  }
-
-  return secret;
-}
-
-export function generateAccessToken(
-  payload: AuthTokenPayload,
-): string {
+export function generateAccessToken(payload: AuthTokenPayload): string {
   return jwt.sign(
     {
       userId: payload.userId,
@@ -36,9 +22,7 @@ export function generateAccessToken(
   );
 }
 
-export function verifyAccessToken(
-  token: string,
-): AuthTokenPayload {
+export function verifyAccessToken(token: string): AuthTokenPayload {
   const decoded = jwt.verify(token, getJwtSecret(), {
     algorithms: ["HS256"],
     issuer: "agendahub-api",

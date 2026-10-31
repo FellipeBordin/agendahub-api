@@ -3,9 +3,12 @@
   "type": "module",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node --enable-source-maps dist/server.js",
     "contract:emit": "prisma contract emit"
   },
   "keywords": [],

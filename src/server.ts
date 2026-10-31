@@ -5,7 +5,9 @@ import { availabilityRoutes } from "./routes/availability.routes.js";
 import { blockedPeriodRoutes } from "./routes/blockedPeriod.routes.js";
 import { authRoutes } from "./routes/auth.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
+import { getPort, validateEnvironment } from "./config/env.js";
 
+validateEnvironment();
 const app = express();
 
 app.use(express.json());
@@ -25,6 +27,8 @@ app.use((_req, res) => {
 
 app.use(errorHandler);
 
-app.listen(3000, () => {
-  console.log("Server is running on port 3000");
+const port = getPort();
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });

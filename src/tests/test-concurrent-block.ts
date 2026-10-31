@@ -101,14 +101,15 @@ async function main() {
     }
 
     // Confere também os registros efetivamente salvos no banco.
-    const appointments = await db.orm.public.Appointment
-      .where({ businessId: business.id })
+    const appointments = await db.orm.public.Appointment.where({
+      businessId: business.id,
+    })
       .where({ status: "SCHEDULED" })
       .all();
 
-    const blocks = await db.orm.public.BlockedPeriod
-      .where({ businessId: business.id })
-      .all();
+    const blocks = await db.orm.public.BlockedPeriod.where({
+      businessId: business.id,
+    }).all();
 
     assert.equal(appointments.length, appointmentCreated ? 1 : 0);
     assert.equal(blocks.length, blockCreated ? 1 : 0);

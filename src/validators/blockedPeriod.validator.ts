@@ -1,4 +1,4 @@
-import { parseDateTime } from "../utils/parseDateTime";
+import { parseDateTime } from "../utils/parseDateTime.js";
 
 export type BlockedPeriodInput = {
   startAt: unknown;

@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { validateLogin } from "../validators/auth.validator.js";
 import { validateService } from "../validators/service.validator.js";
-
 let total = 0;
 
 function test(description: string, action: () => void) {
