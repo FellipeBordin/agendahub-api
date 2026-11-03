@@ -44,8 +44,7 @@ export async function scheduleBlockedPeriod(
 ) {
   return withScheduleLock(businessId, async (tx) => {
     // A consulta precisa usar a mesma transação da gravação.
-    const appointments = await tx.orm.public.Appointment
-      .where({ businessId })
+    const appointments = await tx.orm.public.Appointment.where({ businessId })
       .where((appointment) => appointment.startAt.lt(endAt))
       .where((appointment) => appointment.endAt.gt(startAt))
       .where({ status: "SCHEDULED" })
@@ -84,17 +83,30 @@ export async function getBlockedPeriodsBetween(
     .all();
 }
 
-export async function getBlockedPeriods(businessId: number) {
-  return db.orm.public.BlockedPeriod.where({ businessId }).all();
+export async function getBlockedPeriods(
+  businessId: number,
+  period?: {
+    startAt: string;
+    endAt: string;
+  },
+) {
+  const blockedPeriods = period
+    ? await getBlockedPeriodsBetween(businessId, period.startAt, period.endAt)
+    : await db.orm.public.BlockedPeriod.where({ businessId }).all();
+
+  return blockedPeriods.sort((a, b) => {
+    const difference =
+      new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
+
+    return difference || a.id - b.id;
+  });
 }
 
-export async function deleteBlockedPeriod(
-  businessId: number,
-  id: number,
-) {
+export async function deleteBlockedPeriod(businessId: number, id: number) {
   return withScheduleLock(businessId, async (tx) => {
-    const blockedPeriod = await tx.orm.public.BlockedPeriod
-      .where({ businessId })
+    const blockedPeriod = await tx.orm.public.BlockedPeriod.where({
+      businessId,
+    })
       .where({ id })
       .first();
 
@@ -102,8 +114,7 @@ export async function deleteBlockedPeriod(
       return null;
     }
 
-    await tx.orm.public.BlockedPeriod
-      .where({ businessId })
+    await tx.orm.public.BlockedPeriod.where({ businessId })
       .where({ id })
       .delete();
 

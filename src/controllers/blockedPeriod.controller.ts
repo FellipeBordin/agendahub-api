@@ -1,11 +1,12 @@
 import type { Request, Response } from "express";
 import { validateBlockedPeriod } from "../validators/blockedPeriod.validator.js";
+import { getBusinessBySlug } from "../services/business.service.js";
+import { parseDateTime } from "../utils/parseDateTime.js";
 import {
   scheduleBlockedPeriod,
   getBlockedPeriods,
   deleteBlockedPeriod,
 } from "../services/blockedPeriod.service.js";
-import { getBusinessBySlug } from "../services/business.service.js";
 
 export async function createBlockedPeriodController(
   req: Request,
@@ -80,7 +81,47 @@ export async function listBlockedPeriodsController(
     });
   }
 
-  const blockedPeriods = await getBlockedPeriods(business.id);
+  const { startDate, endDate } = req.query;
+
+  if (startDate === undefined && endDate === undefined) {
+    const blockedPeriods = await getBlockedPeriods(business.id);
+
+    return res.status(200).json(blockedPeriods);
+  }
+
+  if (typeof startDate !== "string" || typeof endDate !== "string") {
+    return res.status(400).json({
+      error: "Informe startDate e endDate no formato YYYY-MM-DD.",
+    });
+  }
+
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+  if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
+    return res.status(400).json({
+      error: "Informe startDate e endDate no formato YYYY-MM-DD.",
+    });
+  }
+
+  const start = parseDateTime(`${startDate}T00:00:00-03:00`);
+  const end = parseDateTime(`${endDate}T00:00:00-03:00`);
+
+  if (!start || !end) {
+    return res.status(400).json({
+      error: "O período informado contém uma data inválida.",
+    });
+  }
+
+  if (end.getTime() <= start.getTime()) {
+    return res.status(400).json({
+      error: "A data final deve ser posterior à data inicial.",
+    });
+  }
+
+  const blockedPeriods = await getBlockedPeriods(business.id, {
+    startAt: start.toISOString(),
+    endAt: end.toISOString(),
+  });
 
   return res.status(200).json(blockedPeriods);
 }

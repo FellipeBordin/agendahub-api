@@ -385,6 +385,19 @@ Exige autenticação do administrador do negócio.
 - Sem datas, retorna todos os agendamentos do negócio.
 - Permite consultar períodos passados.
 
+### Consulta de bloqueios por período
+
+GET /api/blocked-periods/:slug?startDate=2026-11-11&endDate=2026-11-12
+
+Exige autenticação do administrador do negócio.
+
+- Datas no formato YYYY-MM-DD; informe ambas ou nenhuma.
+- Data inicial inclusiva e final exclusiva, no fuso fixo -03:00.
+- Retorna bloqueios que se sobrepõem ao período, inclusive os iniciados antes dele.
+- Ordena por início e ID.
+- Sem parâmetros, retorna todos os bloqueios do negócio.
+- Permite consultar períodos passados.
+
 ## Encerramento
 
 A API trata `SIGINT` e `SIGTERM` para:
