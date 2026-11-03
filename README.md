@@ -372,6 +372,19 @@ Execute testes que criam ou removem registros somente em um ambiente
 de desenvolvimento ou teste. Confira as configurações e a preparação
 dos dados de cada script antes de executá-lo.
 
+### Consulta de agendamentos por período
+
+GET /api/appointments/:slug?startDate=2026-11-04&endDate=2026-11-05
+
+Exige autenticação do administrador do negócio.
+
+- Datas no formato YYYY-MM-DD; ambas são obrigatórias quando há filtro.
+- Data inicial inclusiva e final exclusiva, no fuso fixo -03:00.
+- Retorna agendamentos cujo início esteja dentro do período.
+- Inclui todos os status, ordenados por início e ID.
+- Sem datas, retorna todos os agendamentos do negócio.
+- Permite consultar períodos passados.
+
 ## Encerramento
 
 A API trata `SIGINT` e `SIGTERM` para:

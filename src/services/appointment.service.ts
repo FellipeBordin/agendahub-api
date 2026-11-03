@@ -222,12 +222,28 @@ export async function scheduleAppointment(
   });
 }
 
-export async function getAppointments(businessId: number) {
-  const appointments = await db.orm.public.Appointment.where({
-    businessId,
-  }).all();
+export async function getAppointments(
+  businessId: number,
+  period?: {
+    startAt: string;
+    endAt: string;
+  },
+) {
+  const query = db.orm.public.Appointment.where({ businessId });
 
-  return appointments;
+  const appointments = period
+    ? await query
+        .where((appointment) => appointment.startAt.gte(period.startAt))
+        .where((appointment) => appointment.startAt.lt(period.endAt))
+        .all()
+    : await query.all();
+
+  return appointments.sort((a, b) => {
+    const difference =
+      new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
+
+    return difference || a.id - b.id;
+  });
 }
 
 export async function getAppointmentById(businessId: number, id: number) {
