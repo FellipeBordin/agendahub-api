@@ -6,6 +6,7 @@ import {
   getServiceById,
   updateService,
   updateServiceStatus,
+  deleteService,
 } from "../services/service.service.js";
 import { validateService } from "../validators/service.validator.js";
 import { getBusinessBySlug } from "../services/business.service.js";
@@ -232,4 +233,40 @@ export async function listAllServicesController(req: Request, res: Response) {
   const services = await getAllServices(business.id);
 
   return res.status(200).json(services);
+}
+
+export async function deleteServiceController(req: Request, res: Response) {
+  const slug = req.params.slug;
+
+  if (typeof slug !== "string" || slug.trim() === "") {
+    return res.status(400).json({
+      error: "O negócio não foi informado.",
+    });
+  }
+
+  const id = Number(req.params.id);
+
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return res.status(400).json({
+      error: "ID do serviço inválido.",
+    });
+  }
+
+  const business = await getBusinessBySlug(slug);
+
+  if (!business || !business.active) {
+    return res.status(404).json({
+      error: "Negócio não encontrado.",
+    });
+  }
+
+  const result = await deleteService(business.id, id);
+
+  if (typeof result.statusCode === "number") {
+    return res.status(result.statusCode).json({
+      error: result.error,
+    });
+  }
+
+  return res.status(200).json(result.data);
 }

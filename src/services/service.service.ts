@@ -72,3 +72,40 @@ export async function updateServiceStatus(
     return service;
   });
 }
+
+export async function deleteService(businessId: number, id: number) {
+  return withScheduleLock(businessId, async (tx) => {
+    const service = await tx.orm.public.Service.where({ businessId })
+      .where({ id })
+      .first();
+
+    if (!service) {
+      return {
+        error: "Serviço não encontrado.",
+        statusCode: 404 as const,
+      };
+    }
+
+    // Inclui agendamentos marcados, cancelados e concluídos.
+    const appointment = await tx.orm.public.Appointment.where({ businessId })
+      .where({ serviceId: id })
+      .first();
+
+    if (appointment) {
+      return {
+        error:
+          "Este serviço possui agendamentos vinculados e não pode ser excluído. Você pode desativá-lo.",
+        statusCode: 409 as const,
+      };
+    }
+
+    await tx.orm.public.Service.where({ businessId }).where({ id }).delete();
+
+    return {
+      data: {
+        id: service.id,
+        message: "Serviço excluído com sucesso.",
+      },
+    };
+  });
+}

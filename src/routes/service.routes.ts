@@ -6,6 +6,7 @@ import {
   getServiceByIdController,
   updateServiceController,
   updateServiceStatusController,
+  deleteServiceController,
 } from "../controllers/service.controller.js";
 import {
   requireAuth,
@@ -46,6 +47,13 @@ serviceRoutes.patch(
   requireAuth,
   requireBusinessAccess,
   updateServiceStatusController,
+);
+
+serviceRoutes.delete(
+  "/:slug/:id",
+  requireAuth,
+  requireBusinessAccess,
+  deleteServiceController,
 );
 
 export { serviceRoutes };
