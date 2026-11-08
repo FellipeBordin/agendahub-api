@@ -1,49 +1,52 @@
 // use prisma-8
-
 model Service {
-  id           Int               @id @default(autoincrement())
+  id           Int                        @id @default(autoincrement())
   name         String
   price        Decimal
   duration     Int
   businessId   Int
-  business     Business @relation(fields: [businessId], references: [id])
-  active       Boolean          @default(true)
-  createdAt    TimestamptzString @default(now())
+  business     Business                   @relation(fields:[businessId], references:[id])
+  active       Boolean                    @default(true)
+  createdAt    TimestamptzString          @default(now())
   updatedAt    temporal.updatedAtString()
 
   appointments Appointment[]
 }
 
 model Business {
-  id        Int               @id @default(autoincrement())
-  name      String
-  slug      String            @unique
-  active    Boolean           @default(true)
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+  id                Int                        @id @default(autoincrement())
+  name              String
+  slug              String                     @unique
+  active            Boolean                    @default(true)
+  createdAt         TimestamptzString          @default(now())
+  updatedAt         temporal.updatedAtString()
 
-  services        Service[]
-  appointments    Appointment[]
-  availabilities  Availability[]
-  blockedPeriods  BlockedPeriod[]
-  users User[]
+  services          Service[]
+  appointments      Appointment[]
+  availabilities    Availability[]
+  blockedPeriods    BlockedPeriod[]
+  notifications     Notification[]
+  users             User[]
+  pushSubscriptions PushSubscription[]
 }
 
 model Appointment {
-  id          Int               @id @default(autoincrement())
-  clientName  String
-  clientPhone String
-  startAt     TimestamptzString
-  endAt       TimestamptzString
-  status      AppointmentStatus @default(SCHEDULED)
-  serviceId   Int
-  createdAt   TimestamptzString @default(now())
-  updatedAt   temporal.updatedAtString()
+  id            Int                        @id @default(autoincrement())
+  clientName    String
+  clientPhone   String
+  startAt       TimestamptzString
+  endAt         TimestamptzString
+  status        AppointmentStatus          @default(SCHEDULED)
+  serviceId     Int
+  createdAt     TimestamptzString          @default(now())
+  updatedAt     temporal.updatedAtString()
 
-  service Service @relation(fields: [serviceId], references: [id])
+  notifications Notification[]
 
-   businessId Int
-  business   Business @relation(fields: [businessId], references: [id])
+  service       Service                    @relation(fields:[serviceId], references:[id])
+
+  businessId    Int
+  business      Business                   @relation(fields:[businessId], references:[id])
 }
 
 enum AppointmentStatus {
@@ -53,39 +56,71 @@ enum AppointmentStatus {
 }
 
 model Availability {
-  id         Int     @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   dayOfWeek  Int
   startTime  String
   endTime    String
-  active     Boolean @default(true)
+  active     Boolean  @default(true)
 
   businessId Int
-  business   Business @relation(fields: [businessId], references: [id])
+  business   Business @relation(fields:[businessId], references:[id])
 
   @@unique([businessId, dayOfWeek])
 }
 
 model BlockedPeriod {
-  id        Int               @id @default(autoincrement())
-  startAt   TimestamptzString
-  endAt     TimestamptzString
-  allDay    Boolean           @default(false)
-  reason    String?
-  createdAt TimestamptzString @default(now())
+  id         Int               @id @default(autoincrement())
+  startAt    TimestamptzString
+  endAt      TimestamptzString
+  allDay     Boolean           @default(false)
+  reason     String?
+  createdAt  TimestamptzString @default(now())
 
   businessId Int
-  business   Business @relation(fields: [businessId], references: [id])
+  business   Business          @relation(fields:[businessId], references:[id])
 }
 
 model User {
-  id           Int               @id @default(autoincrement())
-  name         String
-  email        String            @unique
-  passwordHash String
-  active       Boolean           @default(true)
-  createdAt    TimestamptzString @default(now())
-  updatedAt    temporal.updatedAtString()
+  id                Int                        @id @default(autoincrement())
+  name              String
+  email             String                     @unique
+  passwordHash      String
+  active            Boolean                    @default(true)
+  createdAt         TimestamptzString          @default(now())
+  updatedAt         temporal.updatedAtString()
+  pushSubscriptions PushSubscription[]
+
+  businessId        Int
+  business          Business                   @relation(fields:[businessId], references:[id])
+}
+
+model Notification {
+  id            Int                @id @default(autoincrement())
+  businessId    Int
+  appointmentId Int
+  clientName    String
+  serviceName   String
+  startAt       TimestamptzString
+  readAt        TimestamptzString?
+  createdAt     TimestamptzString  @default(now())
+
+  business      Business           @relation(fields:[businessId], references:[id])
+  appointment   Appointment        @relation(fields:[appointmentId], references:[id])
+
+  @@unique([businessId, appointmentId])
+}
+
+model PushSubscription {
+  id         Int                        @id @default(autoincrement())
+  endpoint   String                     @unique
+  p256dh     String
+  auth       String
+  createdAt  TimestamptzString          @default(now())
+  updatedAt  temporal.updatedAtString()
+
+  userId     Int
+  user       User                       @relation(fields:[userId], references:[id])
 
   businessId Int
-  business   Business @relation(fields: [businessId], references: [id])
+  business   Business                   @relation(fields:[businessId], references:[id])
 }

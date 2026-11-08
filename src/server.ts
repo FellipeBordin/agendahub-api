@@ -7,6 +7,8 @@ import { availabilityRoutes } from "./routes/availability.routes.js";
 import { blockedPeriodRoutes } from "./routes/blockedPeriod.routes.js";
 import { authRoutes } from "./routes/auth.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
+import { pushSubscriptionRoutes } from "./routes/pushSubscription.routes.js";
+import { notificationRoutes } from "./routes/notification.routes.js";
 import { getPort, validateEnvironment, getCorsOrigins } from "./config/env.js";
 
 validateEnvironment();
@@ -36,6 +38,8 @@ app.use("/api/services", serviceRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/availability", availabilityRoutes);
 app.use("/api/blocked-periods", blockedPeriodRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/push", pushSubscriptionRoutes);
 
 // Resposta para endereços que não existem.
 app.use((_req, res) => {

@@ -1,9 +1,10 @@
 import { db } from "../prisma/db.js";
+import { sendNewAppointmentPush } from "./pushNotification.service.js";
+import { parseDateTime } from "../utils/parseDateTime.js";
 import {
   withScheduleLock,
   type AppointmentTransaction,
 } from "../utils/scheduleLock.js";
-import { parseDateTime } from "../utils/parseDateTime.js";
 
 async function getAvailabilityInTransaction(
   tx: AppointmentTransaction,
@@ -55,7 +56,7 @@ export async function scheduleAppointment(
   startAt: string,
   serviceId: number,
 ) {
-  return withScheduleLock(businessId, async (tx) => {
+  const result = await withScheduleLock(businessId, async (tx) => {
     const service = await tx.orm.public.Service.where({ businessId })
       .where({ id: serviceId })
       .first();
@@ -205,7 +206,6 @@ export async function scheduleAppointment(
         error: "Este horário não está disponível.",
       };
     }
-
     const appointment = await createAppointment(
       tx,
       businessId,
@@ -216,10 +216,32 @@ export async function scheduleAppointment(
       serviceId,
     );
 
+    // Reserva e notificação são salvas na mesma transação.
+    await tx.orm.public.Notification.create({
+      businessId: appointment.businessId,
+      appointmentId: appointment.id,
+      clientName: appointment.clientName,
+      serviceName: service.name,
+      startAt: appointment.startAt,
+    });
+
     return {
       data: appointment,
     };
   });
+
+  // A transação já terminou: a reserva está confirmada no banco.
+  if (result.data) {
+    void sendNewAppointmentPush(businessId, result.data.id).catch(
+      (error: unknown) => {
+        console.error("Web Push: falha ao iniciar o envio.", {
+          name: error instanceof Error ? error.name : "UnknownError",
+        });
+      },
+    );
+  }
+
+  return result;
 }
 
 export async function getAppointments(
