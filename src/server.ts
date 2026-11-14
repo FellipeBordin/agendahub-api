@@ -10,7 +10,7 @@ import { errorHandler } from "./middlewares/error.middleware.js";
 import { pushSubscriptionRoutes } from "./routes/pushSubscription.routes.js";
 import { notificationRoutes } from "./routes/notification.routes.js";
 import { getPort, validateEnvironment, getCorsOrigins } from "./config/env.js";
-
+import { publicBusinessRoutes } from "./routes/publicBusiness.routes.js";
 validateEnvironment();
 
 const app = express();
@@ -40,6 +40,7 @@ app.use("/api/availability", availabilityRoutes);
 app.use("/api/blocked-periods", blockedPeriodRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/push", pushSubscriptionRoutes);
+app.use("/api/public/businesses", publicBusinessRoutes);
 
 // Resposta para endereços que não existem.
 app.use((_req, res) => {
